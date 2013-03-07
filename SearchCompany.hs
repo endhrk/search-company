@@ -23,13 +23,13 @@ getCompanyRegex ip = "^f."
 searchCompanyFromIp :: String -> IO String
 searchCompanyFromIp ip = do
     contents <- whois ip
-    return $ getCompanyName $ unlines $ filter (isCompany (getCompanyRegex ip)) $ lines contents
+    return . getCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines $ contents
 
 isCompany :: String -> String -> Bool
 isCompany regex line = line =~ regex :: Bool
 
 getCompanyName :: String -> String
-getCompanyName line = line =~ "([^ ]*)$" :: String
+getCompanyName line = line =~ "([^ ]*[ |.][^ ]+)$" :: String
 
 
 whois :: String -> IO String
