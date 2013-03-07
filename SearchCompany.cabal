@@ -1,0 +1,25 @@
+name:                SearchCompany
+version:             0.1.0.0
+synopsis:            Search for company name from IP address using the whois.
+description:         Search for company name from IP address using the whois.
+homepage:            https://github.com/endhrk/SearchCompany
+license:             BSD3
+license-file:        LICENSE
+author:              Hiroki Endo
+maintainer:          endhrk@gmail.com
+-- copyright:           
+category:            Network
+build-type:          Simple
+cabal-version:       >=1.8
+stability:           experimental
+
+executable SearchCompany
+  main-is:             SearchCompany.hs
+  -- other-modules:       Text.Regex.TDFA, Codec.Text.IConv
+  build-depends:       base ==4.5.*, network ==2.3.*, iconv ==0.4.*, bytestring ==0.9.*, utf8-string ==0.3.*, regex-tdfa ==1.1.*
+  -- hs-source-dirs:      src
+
+source-repository head
+  type:                git
+  location:            git://github.com/endhrk/SearchCompany.git
+
