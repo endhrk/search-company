@@ -1,13 +1,7 @@
 import System.IO
 import System.Environment
-import Codec.Text.IConv (convert)
-import Data.ByteString.Lazy.Char8 as BS (pack,unpack,hGetContents,ByteString)
-import Codec.Binary.UTF8.String (encodeString,decodeString)
-import Control.Exception
 import Text.Regex.TDFA
 import Control.Exception as CE
-import System.Info as SYS
-import Control.Applicative
 import Network.Whois
 
 getCompanyRegex :: String -> String

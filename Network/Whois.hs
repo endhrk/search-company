@@ -6,8 +6,8 @@ import Network
 import System.IO
 import System.Environment (getArgs)
 import Codec.Text.IConv (convert)
-import Data.ByteString.Lazy.Char8 as BS (pack,unpack,hGetContents,ByteString)
-import Codec.Binary.UTF8.String (encodeString,decodeString)
+import Data.ByteString.Lazy.Char8 as BS (unpack,hGetContents,ByteString)
+import Codec.Binary.UTF8.String (decodeString)
 import System.Info as SYS (os)
 import Control.Applicative
 
