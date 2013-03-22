@@ -1,9 +1,7 @@
 import System.IO
-import System.Environment
 import Text.Regex.TDFA
-import Control.Exception as CE
 import Network.Whois
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Char8
 import qualified Data.Text.Encoding
 import qualified Data.Text
 import Data.Maybe
@@ -43,13 +41,13 @@ main = do
             input <- getArgFile a "csv" ReadMode
             contents <- hGetContents $ fromJust input
             companies <- mapM searchCompanyFromIp $ lines contents
-            mapM_ (hPutStrLn output) $ zipWith makeCsv (lines contents) companies
+            mapM_ (Data.ByteString.Char8.hPutStrLn output) $ map (Data.Text.Encoding.encodeUtf8 . Data.Text.pack) $ zipWith makeCsv (lines contents) companies
             hClose output
         else if gotArg a "ip"
         then do
             let ip = fromJust $ getArgString a "ip"
             companyName <- searchCompanyFromIp ip
-            hPutStrLn output (makeCsv ip companyName)
+            Data.ByteString.Char8.hPutStrLn output $ Data.Text.Encoding.encodeUtf8 $ Data.Text.pack $ makeCsv ip companyName
             hClose output
         else do
             putStrLn $ argsUsage a
