@@ -18,8 +18,9 @@ stability:           experimental
 
 executable SearchCompany
   main-is:             SearchCompany.hs
-  -- other-modules:       
-  build-depends:       base ==4.5.*, network ==2.3.*, iconv ==0.4.*, bytestring ==0.9.*, utf8-string ==0.3.*, regex-tdfa ==1.1.*, ipreoute==1.2.*
+  --other-modules:       
+  exposed-modules:     Network.Whois
+  build-depends:       base >= 4 && < 5, network >=2.3.2, iconv >=0.4, bytestring >=0.9, utf8-string >=0.3, regex-tdfa >=1.1, parseargs >= 0.1, text>=0.11
   ghc-options:         -Wall
 
 source-repository head

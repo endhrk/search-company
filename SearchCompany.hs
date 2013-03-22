@@ -6,7 +6,6 @@ import Network.Whois
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text.Encoding
 import qualified Data.Text
-import Data.IP
 import Data.Maybe
 import System.Console.ParseArgs
 import qualified Control.Applicative as CA
@@ -40,17 +39,17 @@ main = do
     a <- parseArgsIO ArgsComplete options
     output <- fromJust CA.<$> getArgFile a "out" WriteMode
     if gotArg a "csv"
-    then do
-        input <- getArgFile a "csv" ReadMode
-        contents <- hGetContents $ fromJust input
-        companies <- mapM searchCompanyFromIp $ lines contents
-        mapM_ (hPutStrLn output) $ zipWith makeCsv (lines contents) companies
-        hClose output
-    else if gotArg a "ip"
-    then do
-        let ip = fromJust $ getArgString a "ip"
-        companyName <- searchCompanyFromIp ip
-        hPutStrLn output (makeCsv ip companyName)
-        hClose output
-    else do
-        putStrLn $ argsUsage a
+        then do
+            input <- getArgFile a "csv" ReadMode
+            contents <- hGetContents $ fromJust input
+            companies <- mapM searchCompanyFromIp $ lines contents
+            mapM_ (hPutStrLn output) $ zipWith makeCsv (lines contents) companies
+            hClose output
+        else if gotArg a "ip"
+        then do
+            let ip = fromJust $ getArgString a "ip"
+            companyName <- searchCompanyFromIp ip
+            hPutStrLn output (makeCsv ip companyName)
+            hClose output
+        else do
+            putStrLn $ argsUsage a
