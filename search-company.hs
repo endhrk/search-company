@@ -5,16 +5,26 @@ import qualified Data.ByteString.Char8
 import qualified Data.Text.Encoding
 import qualified Data.Text
 import Data.Maybe
+import qualified System.Random as RND
 import System.Console.ParseArgs
 import qualified Control.Applicative as CA
+import qualified Control.Concurrent as CC
 
 getCompanyRegex :: String -> String
 getCompanyRegex _ = "^f."
 
+searchCompanyFromIpWithDelay :: String -> IO String
+searchCompanyFromIpWithDelay ip = do
+    delay <-  RND.getStdRandom(RND.randomR(1*1000^2,10*1000^2))
+    CC.threadDelay delay
+    searchCompanyFromIp ip
+
 searchCompanyFromIp :: String -> IO String
 searchCompanyFromIp ip = do
     contents <- whois ip
-    return . getCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines $ Data.Text.unpack $ Data.Text.Encoding.decodeUtf8 contents
+    let c = getCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines $ Data.Text.unpack $ Data.Text.Encoding.decodeUtf8 contents
+    putStrLn $ ip ++ "," ++ c
+    return c
 
 isCompany :: String -> String -> Bool
 isCompany regex line = line =~ regex :: Bool
@@ -40,7 +50,7 @@ main = do
         then do
             input <- getArgFile a "csv" ReadMode
             contents <- hGetContents $ fromJust input
-            companies <- mapM searchCompanyFromIp $ lines contents
+            companies <- mapM searchCompanyFromIpWithDelay $ lines contents
             mapM_ (Data.ByteString.Char8.hPutStrLn output) $ map (Data.Text.Encoding.encodeUtf8 . Data.Text.pack) $ zipWith makeCsv (lines contents) companies
             hClose output
         else if gotArg a "ip"

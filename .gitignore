@@ -1,8 +1,10 @@
-SearchCompany
+search-company
 dist
 cabal-dev
 *.o
 *.hi
 *.chi
 *.chs.h
+*.txt
+*.csv
 .virthualenv
