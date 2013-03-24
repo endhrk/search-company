@@ -8,7 +8,6 @@ import Codec.Text.IConv (convert)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString as BS
-import Control.Applicative
 
 toS :: BSL.ByteString -> BS.ByteString
 toS = BS.concat . BSL.toChunks
