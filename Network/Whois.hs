@@ -20,9 +20,16 @@ getWhoisCharCode _ = "ISO-2022-JP"
 
 whois :: String -> IO BS.ByteString
 whois ip = withSocketsDo $ do
-    hSetBuffering stdout NoBuffering
-    h <- connectTo (getWhoisServer ip) (PortNumber 43)
-    hSetBuffering h LineBuffering
-    hPutStrLn h ip
-    c <- BSLC.hGetContents h
-    return $ toS $ convert (getWhoisCharCode ip) "UTF-8" c
+    catch
+        (do
+            hSetBuffering stdout NoBuffering
+            h <- connectTo (getWhoisServer ip) (PortNumber 43)
+            hSetBuffering h LineBuffering
+            hPutStrLn h ip
+            c <- BSLC.hGetContents h
+            return $ toS $ convert (getWhoisCharCode ip) "UTF-8" c
+        )
+        (\e -> do
+            hPrint stderr ("connection failed to whois server\"" ++ (getWhoisServer ip) ++ "\".")
+            return BS.empty
+        )
