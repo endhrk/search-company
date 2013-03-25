@@ -23,7 +23,6 @@ searchCompanyFromIp :: String -> IO String
 searchCompanyFromIp ip = do
     contents <- whois ip
     let c = getCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines $ Data.Text.unpack $ Data.Text.Encoding.decodeUtf8 contents
-    putStrLn $ ip ++ "," ++ c
     return c
 
 isCompany :: String -> String -> Bool
@@ -42,6 +41,12 @@ options =
     , Arg "ip" Nothing Nothing (argDataOptional "IP_ADDRESS" ArgtypeString) "ip address"
     ]
 
+searchAndWrite :: (String -> IO String) -> Handle -> String -> IO ()
+searchAndWrite func h ip = do
+        companyName <- func ip
+        Data.ByteString.Char8.hPutStrLn h $ Data.Text.Encoding.encodeUtf8 $ Data.Text.pack $ makeCsv ip companyName
+        hFlush h
+
 main :: IO ()
 main = do
     a <- parseArgsIO ArgsComplete options
@@ -50,14 +55,11 @@ main = do
         then do
             input <- getArgFile a "csv" ReadMode
             contents <- hGetContents $ fromJust input
-            companies <- mapM searchCompanyFromIpWithDelay $ lines contents
-            mapM_ (Data.ByteString.Char8.hPutStrLn output) $ map (Data.Text.Encoding.encodeUtf8 . Data.Text.pack) $ zipWith makeCsv (lines contents) companies
+            mapM_ (searchAndWrite searchCompanyFromIpWithDelay output) $ lines contents
             hClose output
         else if gotArg a "ip"
         then do
-            let ip = fromJust $ getArgString a "ip"
-            companyName <- searchCompanyFromIp ip
-            Data.ByteString.Char8.hPutStrLn output $ Data.Text.Encoding.encodeUtf8 $ Data.Text.pack $ makeCsv ip companyName
+            searchAndWrite searchCompanyFromIp output $ fromJust $ getArgString a "ip"
             hClose output
         else do
             putStrLn $ argsUsage a
