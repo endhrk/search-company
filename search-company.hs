@@ -3,22 +3,20 @@
 import System.IO
 import Text.Regex.TDFA
 import Network.Whois
-import qualified Data.ByteString.Char8
-import qualified Data.Text.Encoding
-import qualified Data.Text
 import Data.Maybe
 import qualified System.Random as RND
 import System.Console.ParseArgs
 import qualified Control.Applicative as CA
-import qualified Control.Concurrent as CC
-import qualified Distribution.System as DS
+import Control.Concurrent (threadDelay)
+import Distribution.System (buildOS, OS(..))
 import Data.Encoding.CP932
 import Data.Encoding.UTF8
-import qualified Data.Encoding
-import qualified Codec.Text.IConv
+import Data.Encoding
+import Codec.Text.IConv (convert)
 import qualified System.IO.Encoding
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString (ByteString)
+import Control.Monad (forM_)
 
 toL :: ByteString -> BSL.ByteString
 toL = BSL.fromChunks . (:[])
@@ -26,51 +24,47 @@ toL = BSL.fromChunks . (:[])
 getCompanyRegex :: String -> String
 getCompanyRegex _ = "^f."
 
-searchCompanyFromIpWithDelay :: String -> IO String
-searchCompanyFromIpWithDelay ip = do
-    delay <-  RND.getStdRandom(RND.randomR(1*1000^2,10*1000^2))
-    CC.threadDelay delay
-    searchCompanyFromIp ip
-
-searchCompanyFromIp :: String -> IO String
-searchCompanyFromIp ip = do
-    contents <- whois ip
-    if DS.buildOS == DS.Windows
-        then do
-            let sbs = Codec.Text.IConv.convert "UTF-8" "CP932" $ toL contents
-            let sc = Data.Encoding.decodeLazyByteString CP932 sbs
-            let c = (getCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines) sc
-            let ?enc = CP932
-            System.IO.Encoding.putStrLn $ ip ++ "," ++ c
-            return c
-        else do
-            let sc = Data.Encoding.decodeLazyByteString UTF8 $ toL contents
-            let c = (getCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines) sc
-            let ?enc = UTF8
-            System.IO.Encoding.putStrLn $ ip ++ "," ++ c
-            return c
-
 isCompany :: String -> String -> Bool
 isCompany regex line = line =~ regex :: Bool
 
-getCompanyName :: String -> String
-getCompanyName line = line =~ "([^ ]*[ |.][^ ]+)$" :: String
+matchCompanyName :: String -> String
+matchCompanyName line = line =~ "([^ ]*[ |.][^ ]+)$" :: String
 
-makeCsv :: String -> String -> String
-makeCsv a b = a ++ "," ++ b 
+delay :: IO ()
+delay = do
+    delayTime <-  RND.getStdRandom(RND.randomR(1*1000*1000,10*1000*1000))
+    threadDelay delayTime
+
+getCompanyName :: String -> IO String
+getCompanyName ip = do
+    w <- whois ip
+    return $ getName $ toUTF w
+    where
+        toUTF bs = decodeLazyByteString UTF8 $ toL bs
+        getName s = (matchCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines) s
 
 options :: [Arg String]
 options =
-    [ Arg "csv" (Just 'c') (Just "csv") (argDataOptional "FILE_PATH" ArgtypeString) "input csv file path"
-    , Arg "out" (Just 'o') (Just "output") (argDataDefaulted "FILE_PATH" ArgtypeString "output.csv") "output file path"
-    , Arg "ip" Nothing Nothing (argDataOptional "IP_ADDRESS" ArgtypeString) "ip address"
+    [ Arg "csv" (Just 'c') (Just "csv")
+      (argDataOptional "FILE_PATH" ArgtypeString) "input csv file path"
+    , Arg "out" (Just 'o') (Just "output")
+      (argDataDefaulted "FILE_PATH" ArgtypeString "output.csv") "output file path"
+    , Arg "ip" Nothing Nothing
+      (argDataOptional "IP_ADDRESS" ArgtypeString) "ip address"
     ]
 
-searchAndWrite :: (String -> IO String) -> Handle -> String -> IO ()
-searchAndWrite func h ip = do
-        companyName <- func ip
-        hPutStrLn h $ ip ++ "," ++ companyName
-        hFlush h
+putCP932 :: Handle -> String -> String -> IO ()
+putCP932 output ip name = do
+    let cs = (decodeLazyByteString CP932 . convert "UTF-8" "CP932" . encodeLazyByteString UTF8) name
+    let ?enc = CP932
+    System.IO.Encoding.hPutStrLn output $ ip ++ "," ++ cs
+    hFlush output
+
+putUTF8 :: Handle -> String -> String -> IO ()
+putUTF8 output ip name = do
+    let ?enc = UTF8
+    System.IO.Encoding.hPutStrLn output $ ip ++ "," ++ name
+    hFlush output
 
 main :: IO ()
 main = do
@@ -78,13 +72,20 @@ main = do
     output <- fromJust CA.<$> getArgFile a "out" WriteMode
     if gotArg a "csv"
         then do
-            input <- getArgFile a "csv" ReadMode
-            contents <- hGetContents $ fromJust input
-            mapM_ (searchAndWrite searchCompanyFromIpWithDelay output) $ lines contents
+            h <- getArgFile a "csv" ReadMode
+            list <- hGetContents $ fromJust h
+            forM_ (lines list) $ \ip -> do
+                name <- getCompanyName ip
+                putWithEncode ip name output
+                delay
             hClose output
         else if gotArg a "ip"
         then do
-            searchAndWrite searchCompanyFromIp output $ fromJust $ getArgString a "ip"
+            let ip = fromJust $ getArgString a "ip"
+            name <- getCompanyName ip
+            putWithEncode ip name output
             hClose output
         else do
             putStrLn $ argsUsage a
+    where
+        putWithEncode ip name output = if buildOS == Windows then putCP932 output ip name else putUTF8 output ip name
