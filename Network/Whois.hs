@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Network.Whois
     ( whois
     ) where
@@ -8,6 +10,7 @@ import Codec.Text.IConv (convert)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString as BS
+import Control.Exception
 
 toS :: BSL.ByteString -> BS.ByteString
 toS = BS.concat . BSL.toChunks
@@ -20,7 +23,7 @@ getWhoisCharCode _ = "ISO-2022-JP"
 
 whois :: String -> IO BS.ByteString
 whois ip = withSocketsDo $ do
-    catch
+    Control.Exception.catch
         (do
             hSetBuffering stdout NoBuffering
             h <- connectTo (getWhoisServer ip) (PortNumber 43)
@@ -29,7 +32,7 @@ whois ip = withSocketsDo $ do
             c <- BSLC.hGetContents h
             return $ toS $ convert (getWhoisCharCode ip) "UTF-8" c
         )
-        (\e -> do
+        (\(_ :: SomeException) -> do
             hPrint stderr ("connection failed to whois server\"" ++ (getWhoisServer ip) ++ "\".")
             return BS.empty
         )
