@@ -57,7 +57,7 @@ putCP932 :: Handle -> String -> String -> IO ()
 putCP932 output ip name = do
     let cs = (decodeLazyByteString CP932 . convert "UTF-8" "CP932" . encodeLazyByteString UTF8) name
     let ?enc = CP932
-    System.IO.Encoding.hPutStrLn output $ ip ++ "," ++ cs
+    System.IO.Encoding.hPutStr output $ ip ++ "," ++ cs ++ "\r\n"
     System.IO.Encoding.putStrLn $ ip ++ "," ++ cs
     hFlush output
 
