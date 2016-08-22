@@ -17,31 +17,50 @@ import qualified System.IO.Encoding
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString (ByteString)
 import Control.Monad (forM_)
+import Data.String.Utils
 
 toL :: ByteString -> BSL.ByteString
 toL = BSL.fromChunks . (:[])
 
-getCompanyRegex :: String -> String
-getCompanyRegex _ = "^f."
+getJpnicCompanyRegex :: String -> String
+getJpnicCompanyRegex _ = "^f."
+
+getApnicCompanyRegex :: String -> String
+getApnicCompanyRegex _ = "^descr:"
 
 isCompany :: String -> String -> Bool
 isCompany regex line = line =~ regex :: Bool
 
+get3rd (_,_,c) = c
+
 matchCompanyName :: String -> String
-matchCompanyName line = line =~ "([^ ]*[ |.][^ ]+)$" :: String
+matchCompanyName line = get3rd $ (line =~ "(  +)" :: (String,String,String))
+
+filterApnic :: String -> String
+filterApnic name = if (name =~ "APNIC" :: Bool) then "" else name
+
+isJpnic :: String -> Bool
+isJpnic str = not (str =~ "whois.apnic.net" :: Bool)
 
 delay :: IO ()
 delay = do
-    delayTime <-  RND.getStdRandom(RND.randomR(1*1000*1000,10*1000*1000))
+    delayTime <-  RND.getStdRandom(RND.randomR(5*1000*1000,15*1000*1000))
     threadDelay delayTime
 
 getCompanyName :: String -> IO String
 getCompanyName ip = do
-    w <- whois ip
-    return $ getName $ toUTF w
+    bs <- whois ip
+    let str = toUTF bs
+    if isJpnic $ head $ lines str
+        then
+            return $ getJpnicName str
+        else
+            return $ filterApnic $ getApnicName str
     where
         toUTF bs = decodeLazyByteString UTF8 $ toL bs
-        getName s = (matchCompanyName . unlines . filter (isCompany (getCompanyRegex ip)) . lines) s
+        getJpnicName s = (matchCompanyName . head . getList . filter (isCompany (getJpnicCompanyRegex ip)) . lines) s
+        getApnicName s = (matchCompanyName . head . getList . filter (isCompany (getApnicCompanyRegex ip)) . lines) (last $ split "% Information related" s)
+        getList list = if null list then [""] else list
 
 options :: [Arg String]
 options =
